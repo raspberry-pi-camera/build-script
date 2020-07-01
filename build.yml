@@ -1,0 +1,313 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Copy SSH key
+      authorized_key:
+        user: pi
+        state: present
+        key: "{{ lookup('file', '/Users/richard/.ssh/id_rsa.pub') }}"
+
+    - name: Hostname
+      hostname:
+        name: "{{ camname | default('cambuild') }}"
+
+    - name: Hosts entry
+      replace:
+        backup: no
+        dest: /etc/hosts
+        regexp: "^127.0.1.1(?:.*)$"
+        replace: "127.0.1.1  {{ camname | default('cambuild') }}"
+
+    - name: Upgrade
+      apt:
+        name: "*"
+        state: latest
+
+    - name: Install libavahi
+      apt:
+        name: libavahi-client3
+        state: latest
+      become: yes
+    
+    - name: Install dependencies
+      apt:
+        name:
+          - libjasper1
+          - libwebp6
+          - libtiff5
+
+    - name: Install GPIO Python 3
+      apt:
+        name:
+          - python3-rpi.gpio
+          - python3-pip
+          - python-pip
+        state: latest
+      become: yes
+      
+    - name: Install setuptools
+      pip:
+        name: setuptools
+        state: present
+
+    - name: Install Python dependencies
+      pip:
+        executable: /usr/bin/pip3
+        name:
+          - rpi_ws281x
+          - adafruit-circuitpython-neopixel
+        state: present
+
+    - name: Getty TTY1
+      file:
+        src: "/lib/systemd/system/getty@.service"
+        dest: "/etc/systemd/system/getty.target.wants/getty@tty1.service"
+        state: link
+      become: yes
+
+    - name: Configure autologin
+      copy:
+        src: files/autologin.conf
+        dest: /etc/systemd/system/getty@tty1.service.d/autologin.conf
+        owner: root
+      become: yes
+
+    - name: config.txt tweaks
+      blockinfile:
+        path: /boot/config.txt
+        block: |
+          start_x=1
+          gpu_mem=128
+          hdmi_force_hotplug=1
+          disable_splash=1
+          hdmi_group=1
+          hdmi_mode=62
+        state: present
+        
+    - name: SSH directory
+      file:
+        path: /home/pi/.ssh
+        state: directory
+        owner: pi
+        group: pi
+        mode: 0750
+
+    - name: Authorized keys
+      file:
+        path: /home/pi/.ssh/authorized_keys
+        state: touch
+        owner: pi
+        group: pi
+        mode: 0640
+      
+    - name: Install SSH key
+      authorized_key:
+        key: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDt1pSSB8GXAUPlkc9hyYjrGMcomyvN3H3VePzapm3CXU8KSU9ovyItwC2QhV8oKJq+KJgCZnOV3NSrzUqvzyuS1TClS4rMjJqEabnR9jf9ljDX7bjEiFQB+UDLgUKZ9mZOJ+fWIzIZ6MoQ1FNj1WNkc/vDzGzZ2Ma6v8IelYNnpcvrAVP9fXjaGwXexfqoSxJTqSD+b3ue/MWpYWugEdbAF/i3pU+Ko+b+VLMJhrLgXaNHraedglB0jJ4Hpsx9RLDvMITwJJUa/T50s7OtwfEds2HWdD6FmyCwDri3VgMFCTiNOGJWvmw0hnD0Pygm4eRGDPO68GLjTg85AWhpnB5ASG0VOPcwhVPQ6WPITbd9YFsGDIOyBk7wi//GqlWJxzclpbZD65fukxgSiBHEjDYK0/0vWmxItmiXjwP155l0BjLSMPc5LSSsS+q31jL+RzoFKIfL+7ZKSd3cxVME4g6ifGCpCcrk3PnCSUou6J5827w+R08Tkm4x1lZiDhyCKFk= richard@ubsms.org.uk
+        user: pi
+        state: present
+    
+    - name: Disable password SSH login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        line: "{{ item.line }}"
+        insertafter: "{{ item.after }}"
+        state: present
+      with_items:
+        - line: "ChallengeResponseAuthentication no"
+          after: "#ChallengeResponseAuthentication yes"
+        - line: "PasswordAuthentication no"
+          after: "#PasswordAuthentication yes"
+
+    - name: Restart SSH
+      systemd:
+        name: ssh
+        state: restarted
+
+    - name: Uninstall packages (for RO SD)
+      apt:
+        name:
+          - triggerhappy
+          - logrotate
+          - dphys-swapfile
+          - rsyslog
+        state: absent
+        purge: yes
+        
+    - name: Clean up
+      apt:
+        autoremove: yes
+        purge: yes
+    
+    - name: cmdline
+      replace:
+        backup: no
+        dest: /boot/cmdline.txt
+        regexp: " fastboot noswap ro splash quiet plymouth.ignore-serial-consoles logo.nologo vt.global_cursor_default=0"
+        replace: ""
+
+    - name: cmdline
+      replace:
+        backup: no
+        dest: /boot/cmdline.txt
+        regexp: "(.+)"
+        replace: "\\1 fastboot noswap ro splash quiet plymouth.ignore-serial-consoles logo.nologo vt.global_cursor_default=0"
+    
+    - name: cmdline
+      replace:
+        backup: no
+        dest: /boot/cmdline.txt
+        regexp: "console=tty1"
+        replace: "console=tty3"
+    
+    - name: Install busybox-syslogd
+      apt:
+        name: busybox-syslogd
+        state: latest
+
+    - name: fstab change (ro boot)
+      replace:
+        backup: no
+        dest: /etc/fstab
+        regexp: "^(.*vfat.*)defaults(?:,ro)?(.*)"
+        replace: "\\1defaults,ro\\2"
+
+    - name: fstab change (ro rootfs)
+      replace:
+        backup: no
+        dest: /etc/fstab
+        regexp: "^(.*ext4.*)defaults(?:,ro)?(.*)"
+        replace: "\\1defaults,ro\\2"
+    
+    - name: fstab tmpfs
+      lineinfile:
+        path: /etc/fstab
+        line: "{{ item }}"
+        state: present
+      with_items:
+        - "tmpfs        /tmp            tmpfs   nosuid,nodev         0       0"
+        - "tmpfs        /var/log        tmpfs   nosuid,nodev         0       0"
+        - "tmpfs        /var/tmp        tmpfs   nosuid,nodev         0       0"
+      
+    - name: Create dhcpcd.resolv.conf
+      copy:
+        src: /etc/resolv.conf
+        dest: /tmp/dhcpcd.resolv.conf
+        remote_src: yes
+
+    - name: Delete stuff
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /var/lib/dhcp
+        - /var/lib/dhcpcd5
+        - /var/spool
+        - /etc/resolv.conf
+        - /var/lib/systemd/random-seed
+    
+    - name: Link stuff to tmpfs
+      file:
+        src: /tmp
+        dest: "{{ item }}"
+        state: link
+      with_items:
+        - /var/lib/dhcp
+        - /var/lib/dhcpcd5
+        - /var/spool
+    
+    - name: Link dhcpcd.resolv.conf
+      file:
+        src: /tmp/dhcpcd.resolv.conf
+        dest: /etc/resolv.conf
+        state: link
+    
+    - name: Link random-seed
+      file:
+        src: /tmp/random-seed
+        dest: /var/lib/systemd/random-seed
+        state: link
+        force: yes
+      
+    - name: Alter random-seed service
+      lineinfile:
+        dest: /lib/systemd/system/systemd-random-seed.service
+        line: ExecStartPre=/bin/echo "" >/tmp/random-seed
+        insertafter: RemainAfterExit=yes
+
+    - name: Create raspindi
+      file:
+        path: /opt/raspindi
+        state: directory
+        owner: pi
+        group: pi
+      
+    - name: Create raspindi bin
+      file:
+        path: /opt/raspindi/bin
+        state: directory
+        owner: pi
+        group: pi
+    
+    - name: Setup NDI
+      unarchive:
+        src: files/ndi-4.5.2-pi.tar.gz
+        dest: /opt/raspindi/
+        creates: /opt/raspindi/lib/libndi.so
+        
+    - name: Setup OpenCV
+      unarchive:
+        src: files/opencv-4.4.0-pi.tar.gz
+        dest: /opt/raspindi/
+        creates: /opt/raspindi/lib/libopencv_core.so
+
+    - name: Setup RaspiCam
+      unarchive:
+        src: files/raspicam-0.1.2.tar.gz
+        dest: /opt/raspindi/
+        creates: /opt/raspindi/lib/libraspicam.so
+
+    - name: Install raspindi
+      copy:
+        src: files/{{ item.src }}
+        dest: /opt/raspindi/bin/{{ item.dst }}
+        owner: pi
+        group: pi
+        mode: 0755
+      with_items:
+        - src: raspindi
+          dst: raspindi
+        - src: camera.py
+          dst: camera
+        - src: neopixel.py
+          dst: neopixel
+        - src: startup.sh
+          dst: startup
+    
+    - name: Startup scripts
+      lineinfile:
+        dest: /home/pi/.bashrc
+        line: /opt/raspindi/bin/startup
+    
+    - name: Neopixel service
+      copy:
+        src: files/neopixel.service
+        dest: /etc/systemd/system/neopixel.service
+    
+    - name: Enable Neopixel service
+      systemd:
+        daemon_reload: yes
+        name: neopixel
+        enabled: yes
+    
+    - name: Plymouth
+      apt:
+        name:
+          - plymouth
+          - plymouth-themes
+          - pix-plym-splash
+        state: present
+
+    - name: Splash
+      copy:
+        src: files/splash.png
+        dest: /usr/share/plymouth/themes/pix/splash.png
