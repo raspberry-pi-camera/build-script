@@ -56,6 +56,8 @@
         name:
           - rpi_ws281x
           - adafruit-circuitpython-neopixel
+          - zeroconf
+          - libconf
         state: present
 
     - name: Getty TTY1
@@ -282,6 +284,8 @@
           dst: neopixel
         - src: startup.sh
           dst: startup
+        - src: atem.py
+          dst: atem
     
     - name: Startup scripts
       lineinfile:
@@ -298,6 +302,18 @@
         daemon_reload: yes
         name: neopixel
         enabled: yes
+
+    - name: config file
+      copy:
+        src: files/raspindi.conf
+        dest: /boot/raspindi.conf
+    
+    - name: Link config file
+      file:
+        src: /boot/raspindi.conf
+        dest: /etc/raspindi.conf
+        state: link
+        force: yes
     
     - name: Plymouth
       apt:
@@ -311,3 +327,7 @@
       copy:
         src: files/splash.png
         dest: /usr/share/plymouth/themes/pix/splash.png
+    
+    - name: Shut down
+      command: /sbin/shutdown -t now
+      when: shutdown | default(True)

@@ -17,4 +17,5 @@ if not gui:
 else:
     with open("/tmp/neopixel.state", "w") as file:
         file.write("F")
+    subprocess.Popen(['/opt/raspindi/bin/atem'])
     subprocess.call(['/usr/bin/raspistill', '-fp', '-t', '0', '-w', '1920',  '-h', '1080'])
