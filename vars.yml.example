@@ -1,0 +1,8 @@
+---
+
+camname: "cambuild"
+ssh_key: "Your-Key-Here"
+rapsindi_version: "1.0.0"
+atem_version: "1.0.0"
+startup_version: "1.0.0"
+neopixel_version: "1.0.0"
