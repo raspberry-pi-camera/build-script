@@ -4,11 +4,19 @@ import RPi.GPIO as GPIO
 import subprocess
 import os
 from pathlib import Path
+import sys
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 gui = GPIO.input(17)
+
+version = 1.1
+
+if len(sys.argv) > 1:
+    if sys.argv[1] == "-v":
+        print(version)
+        exit()
 
 if not gui:
     env = os.environ

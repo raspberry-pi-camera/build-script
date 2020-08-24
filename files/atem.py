@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import socket
+import sys
 import struct
 import ctypes
 import time
@@ -8,6 +9,12 @@ from pprint import pprint
 from zeroconf import ServiceBrowser, Zeroconf
 import libconf
 
+version = 1.0
+
+if len(sys.argv) > 1:
+    if sys.argv[1] == "-v":
+        print(version)
+        exit()
 def dumpHex(buffer):
     s = ''
     for c in buffer:
@@ -647,7 +654,6 @@ if __name__ == "__main__":
         time.sleep(0.5)
 
     hexaddress = listener.info.addresses[0]
-    # exit()
 
     a = Atem("{}.{}.{}.{}".format(hexaddress[0], hexaddress[1],hexaddress[2],hexaddress[3]))
 

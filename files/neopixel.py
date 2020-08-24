@@ -5,6 +5,7 @@ import board
 import neopixel
 import os.path
 import signal
+import sys
 
 pixel_pin = board.D21
 
@@ -13,6 +14,13 @@ num_pixels = 24
 ORDER = neopixel.GRB
 
 statepath = "/tmp/neopixel.state"
+
+version = 1.1
+
+if len(sys.argv) > 1:
+    if sys.argv[1] == "-v":
+        print(version)
+        exit()
 
 if not os.path.isfile(statepath):
     with open(statepath, "w") as file:
