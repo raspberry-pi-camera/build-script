@@ -32,6 +32,7 @@
           - libjasper1
           - libwebp6
           - libtiff5
+          - libconfig++9v5
 
     - name: Install Python 3 pip
       apt:
@@ -72,6 +73,11 @@
           hdmi_group=1
           hdmi_mode=62
         state: present
+
+    - name: Identify as camera
+      copy:
+        src: piplatform.txt
+        dest: /boot/piplatform.txt
         
     - name: SSH directory
       file:
@@ -153,75 +159,75 @@
         name: busybox-syslogd
         state: latest
 
-    # - name: fstab change (ro boot)
-    #   replace:
-    #     backup: no
-    #     dest: /etc/fstab
-    #     regexp: "^(.*vfat.*)defaults(?:,ro)?(.*)"
-    #     replace: "\\1defaults,ro\\2"
+    - name: fstab change (ro boot)
+      replace:
+        backup: no
+        dest: /etc/fstab
+        regexp: "^(.*vfat.*)defaults(?:,ro)?(.*)"
+        replace: "\\1defaults,ro\\2"
 
-    # - name: fstab change (ro rootfs)
-    #   replace:
-    #     backup: no
-    #     dest: /etc/fstab
-    #     regexp: "^(.*ext4.*)defaults(?:,ro)?(.*)"
-    #     replace: "\\1defaults,ro\\2"
+    - name: fstab change (ro rootfs)
+      replace:
+        backup: no
+        dest: /etc/fstab
+        regexp: "^(.*ext4.*)defaults(?:,ro)?(.*)"
+        replace: "\\1defaults,ro\\2"
     
-    # - name: fstab tmpfs
-    #   lineinfile:
-    #     path: /etc/fstab
-    #     line: "{{ item }}"
-    #     state: present
-    #   with_items:
-    #     - "tmpfs        /tmp            tmpfs   nosuid,nodev         0       0"
-    #     - "tmpfs        /var/log        tmpfs   nosuid,nodev         0       0"
-    #     - "tmpfs        /var/tmp        tmpfs   nosuid,nodev         0       0"
+    - name: fstab tmpfs
+      lineinfile:
+        path: /etc/fstab
+        line: "{{ item }}"
+        state: present
+      with_items:
+        - "tmpfs        /tmp            tmpfs   nosuid,nodev         0       0"
+        - "tmpfs        /var/log        tmpfs   nosuid,nodev         0       0"
+        - "tmpfs        /var/tmp        tmpfs   nosuid,nodev         0       0"
       
-    # - name: Create dhcpcd.resolv.conf
-    #   copy:
-    #     src: /etc/resolv.conf
-    #     dest: /tmp/dhcpcd.resolv.conf
-    #     remote_src: yes
+    - name: Create dhcpcd.resolv.conf
+      copy:
+        src: /etc/resolv.conf
+        dest: /tmp/dhcpcd.resolv.conf
+        remote_src: yes
 
-    # - name: Delete stuff
-    #   file:
-    #     path: "{{ item }}"
-    #     state: absent
-    #   with_items:
-    #     - /var/lib/dhcp
-    #     - /var/lib/dhcpcd5
-    #     - /var/spool
-    #     - /etc/resolv.conf
-    #     - /var/lib/systemd/random-seed
+    - name: Delete stuff
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /var/lib/dhcp
+        - /var/lib/dhcpcd5
+        - /var/spool
+        - /etc/resolv.conf
+        - /var/lib/systemd/random-seed
     
-    # - name: Link stuff to tmpfs
-    #   file:
-    #     src: /tmp
-    #     dest: "{{ item }}"
-    #     state: link
-    #   with_items:
-    #     - /var/lib/dhcp
-    #     - /var/lib/dhcpcd5
-    #     - /var/spool
+    - name: Link stuff to tmpfs
+      file:
+        src: /tmp
+        dest: "{{ item }}"
+        state: link
+      with_items:
+        - /var/lib/dhcp
+        - /var/lib/dhcpcd5
+        - /var/spool
     
-    # - name: Link dhcpcd.resolv.conf
-    #   file:
-    #     src: /tmp/dhcpcd.resolv.conf
-    #     dest: /etc/resolv.conf
-    #     state: link
+    - name: Link dhcpcd.resolv.conf
+      file:
+        src: /tmp/dhcpcd.resolv.conf
+        dest: /etc/resolv.conf
+        state: link
     
-    # - name: Link random-seed
-    #   file:
-    #     src: /tmp/random-seed
-    #     dest: /var/lib/systemd/random-seed
-    #     state: link
-    #     force: yes
+    - name: Link random-seed
+      file:
+        src: /tmp/random-seed
+        dest: /var/lib/systemd/random-seed
+        state: link
+        force: yes
       
-    # - name: Alter random-seed service
-    #   lineinfile:
-    #     dest: /lib/systemd/system/systemd-random-seed.service
-    #     line: ExecStartPre=/bin/echo "" >/tmp/random-seed
-    #     insertafter: RemainAfterExit=yes
+    - name: Alter random-seed service
+      lineinfile:
+        dest: /lib/systemd/system/systemd-random-seed.service
+        line: ExecStartPre=/bin/echo "" >/tmp/random-seed
+        insertafter: RemainAfterExit=yes
 
     - name: Create raspindi
       file:
@@ -353,6 +359,12 @@
         url: https://github.com/raspberry-pi-camera/raspindi/raw/v{{ raspindi_version }}/etc/raspindi.conf.default
         dest: /boot/raspindi.conf
     
+    - name: Set camera number
+      lineinfile:
+        path: /boot/raspindi.conf
+        regexp: "^camera_number"
+        line: 'camera_number = "{{ cam_number }}";'
+    
     - name: Link config file
       file:
         src: /boot/raspindi.conf
@@ -368,11 +380,54 @@
           - pix-plym-splash
         state: present
 
-    - name: Splash
+    - name: Create plymouth theme dir
+      file:
+        path: /usr/share/plymouth/themes/raspindi
+        state: directory
+
+    - name: Plymouth Theme
       get_url:
-        url: https://github.com/raspberry-pi-camera/raspindi/raw/v{{ raspindi_version }}/assets/splash.png
-        dest: /usr/share/plymouth/themes/pix/splash.png
+        url: https://github.com/raspberry-pi-camera/plymouth-theme/raw/master/raspindi/{{ item }}
+        dest: /usr/share/plymouth/themes/raspindi/{{ item }}
+      with_items:
+        - raspindi.plymouth
+        - raspindi.script
+        - splash.png
     
-    - name: Shut down
-      command: /sbin/shutdown -t now
-      when: shutdown | default(True)
+    - name: Set Plymouth Theme
+      shell:
+        cmd: plymouth-set-default-theme raspindi
+        
+    - name: Create monitor server dir
+      file:
+        path: /opt/monitor-server/
+        state: directory
+
+    - name: Download montor server
+      unarchive:
+        src: https://github.com/raspberry-pi-camera/monitor-server/archive/master.tar.gz
+        remote_src: yes
+        extra_opts:
+          - '--strip-components=1'
+        dest: /opt/monitor-server/
+    
+    - name: Install dependencies
+      pip:
+        executable: /usr/bin/pip3
+        requirements: /opt/monitor-server/requirements.txt
+        state: present
+
+    - name: Monitor Server service
+      get_url:
+        url: https://github.com/raspberry-pi-camera/monitor-server/raw/master/monitor-server.service
+        dest: /etc/systemd/system/monitor-server.service
+        
+    - name: Enable Monitor Server service
+      systemd:
+        daemon_reload: yes
+        name: monitor-server
+        enabled: yes
+
+    # - name: Shut down
+    #   command: /sbin/shutdown -t now
+    #   when: shutdown | default(True)
