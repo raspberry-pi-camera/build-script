@@ -428,6 +428,10 @@
         name: monitor-server
         enabled: yes
 
-    # - name: Shut down
-    #   command: /sbin/shutdown -t now
-    #   when: shutdown | default(True)
+    - name: Shut down
+      command: /sbin/shutdown -h now
+      when: shutdown | default(False)
+
+    - name: Reboot
+      command: /sbin/shutdown -r now
+      when: reboot | default(True)
