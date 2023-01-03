@@ -248,6 +248,8 @@
         src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndi-aarch64.tar.gz
         dest: /opt/raspindi/
         creates: /opt/raspindi/lib/libndi.so
+        extra_opts:
+          - '--strip-components=1'
       when: ansible_architecture == "aarch64"
     
     - name: Setup NDI
@@ -256,6 +258,8 @@
         src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndi-armv7.tar.gz
         dest: /opt/raspindi/
         creates: /opt/raspindi/lib/libndi.so
+        extra_opts:
+          - '--strip-components=1'
       when: ansible_architecture != "aarch64"
         
     - name: Setup libndioutput
