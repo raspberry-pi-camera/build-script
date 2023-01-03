@@ -5,64 +5,64 @@
 
   tasks:
     - name: Hostname
-      hostname:
+      ansible.builtin.hostname:
         name: "{{ camname | default('cambuild') }}"
 
     - name: Hosts entry
-      replace:
+      ansible.builtin.replace:
         backup: no
         dest: /etc/hosts
         regexp: "^127.0.1.1(?:.*)$"
         replace: "127.0.1.1  {{ camname | default('cambuild') }}"
 
     - name: Upgrade
-      apt:
+      ansible.builtin.apt:
         name: "*"
         state: latest
         update_cache
 
     - name: Install libavahi
-      apt:
+      ansible.builtin.apt:
         name: libavahi-client3
         state: latest
       become: yes
     
     - name: Install dependencies
-      apt:
+      ansible.builtin.apt:
         name:
           - libwebp6
           - libtiff5
           - libconfig++9v5
 
     - name: Install Python 3 pip
-      apt:
+      ansible.builtin.apt:
         name:
           - python3-pip
         state: latest
       become: yes
       
     - name: Install setuptools
-      pip:
+      ansible.builtin.pip:
         executable: /usr/bin/pip3
         name: setuptools
         state: present
 
     - name: Getty TTY1
-      file:
+      ansible.builtin.file:
         src: "/lib/systemd/system/getty@.service"
         dest: "/etc/systemd/system/getty.target.wants/getty@tty1.service"
         state: link
       become: yes
 
     - name: Configure autologin
-      copy:
+      ansible.builtin.copy:
         src: files/autologin.conf
         dest: /etc/systemd/system/getty@tty1.service.d/autologin.conf
         owner: root
       become: yes
 
     - name: config.txt tweaks
-      blockinfile:
+      ansible.builtin.blockinfile:
         path: /boot/config.txt
         block: |
           start_x=1
@@ -75,12 +75,12 @@
         state: present
 
     - name: Identify as camera
-      copy:
+      ansible.builtin.copy:
         src: piplatform.txt
         dest: /boot/piplatform.txt
         
     - name: SSH directory
-      file:
+      ansible.builtin.file:
         path: /home/pi/.ssh
         state: directory
         owner: pi
@@ -88,7 +88,7 @@
         mode: 0750
 
     - name: Authorized keys
-      file:
+      ansible.builtin.file:
         path: /home/pi/.ssh/authorized_keys
         state: touch
         owner: pi
@@ -96,13 +96,13 @@
         mode: 0640
       
     - name: Install SSH key
-      authorized_key:
+      ansible.posix.authorized_key:
         key: "{{ ssh_key }}"
         user: pi
         state: present
     
     - name: Disable password SSH login
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         line: "{{ item.line }}"
         insertafter: "{{ item.after }}"
@@ -114,12 +114,12 @@
           after: "#PasswordAuthentication yes"
 
     - name: Restart SSH
-      systemd:
+      ansible.builtin.systemd:
         name: ssh
         state: restarted
 
     - name: Uninstall packages (for RO SD)
-      apt:
+      ansible.builtin.apt:
         name:
           - triggerhappy
           - logrotate
@@ -129,52 +129,52 @@
         purge: yes
         
     - name: Clean up
-      apt:
+      ansible.builtin.apt:
         autoremove: yes
         purge: yes
     
     - name: cmdline
-      replace:
+      ansible.builtin.replace:
         backup: no
         dest: /boot/cmdline.txt
         regexp: " fastboot noswap ro splash quiet plymouth.ignore-serial-consoles logo.nologo vt.global_cursor_default=0"
         replace: ""
 
     - name: cmdline
-      replace:
+      ansible.builtin.replace:
         backup: no
         dest: /boot/cmdline.txt
         regexp: "(.+)"
         replace: "\\1 fastboot noswap ro splash quiet plymouth.ignore-serial-consoles logo.nologo vt.global_cursor_default=0"
     
     - name: cmdline
-      replace:
+      ansible.builtin.replace:
         backup: no
         dest: /boot/cmdline.txt
         regexp: "console=tty1"
         replace: "console=tty3"
     
     - name: Install busybox-syslogd
-      apt:
+      ansible.builtin.apt:
         name: busybox-syslogd
         state: latest
 
     - name: fstab change (ro boot)
-      replace:
+      ansible.builtin.replace:
         backup: no
         dest: /etc/fstab
         regexp: "^(.*vfat.*)defaults(?:,ro)?(.*)"
         replace: "\\1defaults,ro\\2"
 
     - name: fstab change (ro rootfs)
-      replace:
+      ansible.builtin.replace:
         backup: no
         dest: /etc/fstab
         regexp: "^(.*ext4.*)defaults(?:,ro)?(.*)"
         replace: "\\1defaults,ro\\2"
     
     - name: fstab tmpfs
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/fstab
         line: "{{ item }}"
         state: present
@@ -184,13 +184,13 @@
         - "tmpfs        /var/tmp        tmpfs   nosuid,nodev         0       0"
       
     - name: Create dhcpcd.resolv.conf
-      copy:
+      ansible.builtin.copy:
         src: /etc/resolv.conf
         dest: /tmp/dhcpcd.resolv.conf
         remote_src: yes
 
     - name: Delete stuff
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
         state: absent
       with_items:
@@ -201,7 +201,7 @@
         - /var/lib/systemd/random-seed
     
     - name: Link stuff to tmpfs
-      file:
+      ansible.builtin.file:
         src: /tmp
         dest: "{{ item }}"
         state: link
@@ -211,33 +211,33 @@
         - /var/spool
     
     - name: Link dhcpcd.resolv.conf
-      file:
+      ansible.builtin.file:
         src: /tmp/dhcpcd.resolv.conf
         dest: /etc/resolv.conf
         state: link
     
     - name: Link random-seed
-      file:
+      ansible.builtin.file:
         src: /tmp/random-seed
         dest: /var/lib/systemd/random-seed
         state: link
         force: yes
       
     - name: Alter random-seed service
-      lineinfile:
+      ansible.builtin.lineinfile:
         dest: /lib/systemd/system/systemd-random-seed.service
         line: ExecStartPre=/bin/echo "" >/tmp/random-seed
         insertafter: RemainAfterExit=yes
 
     - name: Create raspindi
-      file:
+      ansible.builtin.file:
         path: /opt/raspindi
         state: directory
         owner: pi
         group: pi
       
     - name: Create raspindi bin
-      file:
+      ansible.builtin.file:
         path: /opt/raspindi/bin
         state: directory
         owner: pi
@@ -254,7 +254,7 @@
       when: ansible_architecture == "aarch64"
     
     - name: Setup NDI
-      unarchive:
+      ansible.builtin.unarchive:
         remote_src: yes
         src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndi-armv7.tar.gz
         dest: /opt/raspindi/
@@ -264,7 +264,7 @@
       when: ansible_architecture != "aarch64"
         
     - name: Setup libndioutput
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndioutput-aarch64.so
         dest: /opt/raspindi/lib/libndioutput.so
         owner: pi
@@ -273,7 +273,7 @@
       when: ansible_architecture == "aarch64"
         
     - name: Setup libndioutput
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndioutput-armv7.so
         dest: /opt/raspindi/lib/libndioutput.so
         owner: pi
@@ -282,7 +282,7 @@
       when: ansible_architecture != "aarch64"
 
     - name: Install raspindi
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/raspindi-aarch64
         dest: /opt/raspindi/bin/raspindi
         owner: pi
@@ -291,7 +291,7 @@
       when: ansible_architecture == "aarch64"
 
     - name: Install raspindi
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/raspindi-armv7
         dest: /opt/raspindi/bin/raspindi
         owner: pi
@@ -300,7 +300,7 @@
       when: ansible_architecture != "aarch64"
     
     - name: Install Atem Tally
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/atem-tally/raw/v{{ atem_version }}/atem.py
         dest: /opt/raspindi/bin/atem
         owner: pi
@@ -308,7 +308,7 @@
         mode: 0755
 
     - name: Get Atem Tally requirements
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/atem-tally/raw/v{{ atem_version }}/requirements.txt
         dest: /tmp/atem-requirements.txt
         owner: pi
@@ -316,13 +316,13 @@
         mode: 0755
 
     - name: Install dependencies
-      pip:
+      ansible.builtin.pip:
         executable: /usr/bin/pip3
         requirements: /tmp/atem-requirements.txt
         state: present
     
     - name: Install Neopixel
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/neopixel/raw/v{{ neopixel_version }}/neopixel.py
         dest: /opt/raspindi/bin/neopixel
         owner: pi
@@ -330,7 +330,7 @@
         mode: 0755
 
     - name: Get Neopixel requirements
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/neopixel/raw/v{{ neopixel_version }}/requirements.txt
         dest: /tmp/neopixel-requirements.txt
         owner: pi
@@ -338,13 +338,13 @@
         mode: 0755
 
     - name: Install dependencies
-      pip:
+      ansible.builtin.pip:
         executable: /usr/bin/pip3
         requirements: /tmp/neopixel-requirements.txt
         state: present
     
     - name: Install Startup
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/startup/raw/v{{ startup_version }}/startup.py
         dest: /opt/raspindi/bin/startup
         owner: pi
@@ -352,7 +352,7 @@
         mode: 0755
 
     - name: Get Startup requirements
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/startup/raw/v{{ startup_version }}/requirements.txt
         dest: /tmp/startup-requirements.txt
         owner: pi
@@ -360,47 +360,47 @@
         mode: 0755
 
     - name: Install dependencies
-      pip:
+      ansible.builtin.pip:
         executable: /usr/bin/pip3
         requirements: /tmp/startup-requirements.txt
         state: present
     
     - name: Startup scripts
-      lineinfile:
+      ansible.builtin.lineinfile:
         dest: /home/pi/.bashrc
         line: /opt/raspindi/bin/startup
     
     - name: Neopixel service
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/neopixel/raw/v{{ neopixel_version }}/neopixel.service
         dest: /etc/systemd/system/neopixel.service
     
     - name: Enable Neopixel service
-      systemd:
+      ansible.builtin.systemd:
         daemon_reload: yes
         name: neopixel
         enabled: yes
 
     - name: config file
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/raspindi/raw/v{{ raspindi_version }}/etc/raspindi.conf.default
         dest: /boot/raspindi.conf
     
     - name: Set camera number
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /boot/raspindi.conf
         regexp: "^camera_number"
         line: 'camera_number = "{{ cam_number }}";'
     
     - name: Link config file
-      file:
+      ansible.builtin.file:
         src: /boot/raspindi.conf
         dest: /etc/raspindi.conf
         state: link
         force: yes
     
     - name: Plymouth
-      apt:
+      ansible.builtin.apt:
         name:
           - plymouth
           - plymouth-themes
@@ -408,12 +408,12 @@
         state: present
 
     - name: Create plymouth theme dir
-      file:
+      ansible.builtin.file:
         path: /usr/share/plymouth/themes/raspindi
         state: directory
 
     - name: Plymouth Theme
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/plymouth-theme/raw/master/raspindi/{{ item }}
         dest: /usr/share/plymouth/themes/raspindi/{{ item }}
       with_items:
@@ -422,16 +422,16 @@
         - splash.png
     
     - name: Set Plymouth Theme
-      shell:
+      ansible.builtin.shell:
         cmd: plymouth-set-default-theme raspindi
         
     - name: Create monitor server dir
-      file:
+      ansible.builtin.file:
         path: /opt/monitor-server/
         state: directory
 
     - name: Download montor server
-      unarchive:
+      ansible.builtin.unarchive:
         src: https://github.com/raspberry-pi-camera/monitor-server/archive/master.tar.gz
         remote_src: yes
         extra_opts:
@@ -439,26 +439,26 @@
         dest: /opt/monitor-server/
     
     - name: Install dependencies
-      pip:
+      ansible.builtin.pip:
         executable: /usr/bin/pip3
         requirements: /opt/monitor-server/requirements.txt
         state: present
 
     - name: Monitor Server service
-      get_url:
+      ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/monitor-server/raw/master/monitor-server.service
         dest: /etc/systemd/system/monitor-server.service
         
     - name: Enable Monitor Server service
-      systemd:
+      ansible.builtin.systemd:
         daemon_reload: yes
         name: monitor-server
         enabled: yes
 
     - name: Shut down
-      command: /sbin/shutdown -h now
+      ansible.builtin.command: /sbin/shutdown -h now
       when: shutdown | default(False)
 
     - name: Reboot
-      command: /sbin/shutdown -r now
+      ansible.builtin.command: /sbin/shutdown -r now
       when: reboot | default(True)
