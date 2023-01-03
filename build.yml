@@ -19,6 +19,7 @@
       apt:
         name: "*"
         state: latest
+        update_cache
 
     - name: Install libavahi
       apt:
