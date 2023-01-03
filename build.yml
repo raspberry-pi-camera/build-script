@@ -248,7 +248,7 @@
         src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndi-aarch64.tar.gz
         dest: /opt/raspindi/
         creates: /opt/raspindi/lib/libndi.so
-        when: ansible_architecture == "aarch64"
+      when: ansible_architecture == "aarch64"
     
     - name: Setup NDI
       unarchive:
@@ -256,7 +256,7 @@
         src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndi-armv7.tar.gz
         dest: /opt/raspindi/
         creates: /opt/raspindi/lib/libndi.so
-        when: ansible_architecture != "aarch64"
+      when: ansible_architecture != "aarch64"
         
     - name: Setup libndioutput
       get_url:
@@ -265,7 +265,7 @@
         owner: pi
         group: pi
         mode: 0755
-        when: ansible_architecture == "aarch64"
+      when: ansible_architecture == "aarch64"
         
     - name: Setup libndioutput
       get_url:
@@ -274,7 +274,7 @@
         owner: pi
         group: pi
         mode: 0755
-        when: ansible_architecture != "aarch64"
+      when: ansible_architecture != "aarch64"
 
     - name: Install raspindi
       get_url:
@@ -283,7 +283,7 @@
         owner: pi
         group: pi
         mode: 0755
-        when: ansible_architecture == "aarch64"
+      when: ansible_architecture == "aarch64"
 
     - name: Install raspindi
       get_url:
@@ -292,7 +292,7 @@
         owner: pi
         group: pi
         mode: 0755
-        when: ansible_architecture != "aarch64"
+      when: ansible_architecture != "aarch64"
     
     - name: Install Atem Tally
       get_url:
