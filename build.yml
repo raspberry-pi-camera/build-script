@@ -246,31 +246,54 @@
     - name: Setup NDI
       unarchive:
         remote_src: yes
-        src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/ndi.tar.gz
+        src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndi-aarch64.tar.gz
         dest: /opt/raspindi/
         creates: /opt/raspindi/lib/libndi.so
+        when: ansible_architecture == "aarch64"
+    
+    - name: Setup NDI
+      unarchive:
+        remote_src: yes
+        src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndi-armv7.tar.gz
+        dest: /opt/raspindi/
+        creates: /opt/raspindi/lib/libndi.so
+        when: ansible_architecture != "aarch64"
         
-    - name: Setup OpenCV
-      unarchive:
-        remote_src: yes
-        src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/opencv.tar.gz
-        dest: /opt/raspindi/
-        creates: /opt/raspindi/lib/libopencv_core.so
-
-    - name: Setup RaspiCam
-      unarchive:
-        remote_src: yes
-        src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/raspicam.tar.gz
-        dest: /opt/raspindi/
-        creates: /opt/raspindi/lib/libraspicam.so
+    - name: Setup libndioutput
+      get_url:
+        url: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndioutput-aarch64.so
+        dest: /opt/raspindi/lib/libndioutput.so
+        owner: pi
+        group: pi
+        mode: 0755
+        when: ansible_architecture == "aarch64"
+        
+    - name: Setup libndioutput
+      get_url:
+        url: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndioutput-armv7.so
+        dest: /opt/raspindi/lib/libndioutput.so
+        owner: pi
+        group: pi
+        mode: 0755
+        when: ansible_architecture != "aarch64"
 
     - name: Install raspindi
       get_url:
-        url: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/raspindi
+        url: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/raspindi-aarch64
         dest: /opt/raspindi/bin/raspindi
         owner: pi
         group: pi
         mode: 0755
+        when: ansible_architecture == "aarch64"
+
+    - name: Install raspindi
+      get_url:
+        url: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/raspindi-armv7
+        dest: /opt/raspindi/bin/raspindi
+        owner: pi
+        group: pi
+        mode: 0755
+        when: ansible_architecture != "aarch64"
     
     - name: Install Atem Tally
       get_url:
