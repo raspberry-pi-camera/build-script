@@ -1,4 +1,4 @@
 .DS*
-venv
+.venv
 hosts
 vars.yml
