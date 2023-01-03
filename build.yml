@@ -248,9 +248,7 @@
         remote_src: yes
         src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndi-aarch64.tar.gz
         dest: /opt/raspindi/
-        creates: /opt/raspindi/lib/libndi.so
-        extra_opts:
-          - '--strip-components=1'
+        creates: /opt/raspindi/usr/lib/libndi.so
       when: ansible_architecture == "aarch64"
     
     - name: Setup NDI
@@ -258,15 +256,13 @@
         remote_src: yes
         src: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndi-armv7.tar.gz
         dest: /opt/raspindi/
-        creates: /opt/raspindi/lib/libndi.so
-        extra_opts:
-          - '--strip-components=1'
+        creates: /opt/raspindi/usr/lib/libndi.so
       when: ansible_architecture != "aarch64"
         
     - name: Setup libndioutput
       ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndioutput-aarch64.so
-        dest: /opt/raspindi/lib/libndioutput.so
+        dest: /opt/raspindi/usr/lib/libndioutput.so
         owner: pi
         group: pi
         mode: 0755
@@ -275,7 +271,7 @@
     - name: Setup libndioutput
       ansible.builtin.get_url:
         url: https://github.com/raspberry-pi-camera/raspindi/releases/download/v{{ raspindi_version }}/libndioutput-armv7.so
-        dest: /opt/raspindi/lib/libndioutput.so
+        dest: /opt/raspindi/usr/lib/libndioutput.so
         owner: pi
         group: pi
         mode: 0755
