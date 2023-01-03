@@ -19,7 +19,7 @@
       ansible.builtin.apt:
         name: "*"
         state: latest
-        update_cache
+        update_cache: true
 
     - name: Install libavahi
       ansible.builtin.apt:
